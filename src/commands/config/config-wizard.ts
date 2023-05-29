@@ -6,7 +6,7 @@ import { sortBy } from 'lodash';
 import prompts, { PromptObject } from 'prompts';
 import { Options } from '../../types';
 import {
-  CONFIG_ELEMENTS,
+  ENV_CONFIG_ELEMENTS,
   display,
   extendBaseCommand,
   getEnvConfig,
@@ -43,7 +43,7 @@ cmd.action(async (options: Options) => {
   // const mdsSdkUtils = require('@maddonkeysoftware/mds-cloud-sdk-node/src/lib/utils');
   // const foo = mdsSdkUtils.getConfigurationUrls('identityUrl', allowSelfCert));
 
-  const configElements = sortBy(CONFIG_ELEMENTS, 'displayOrder');
+  const configElements = sortBy(ENV_CONFIG_ELEMENTS, 'displayOrder');
   const query = configElements.map(
     (e) =>
       ({

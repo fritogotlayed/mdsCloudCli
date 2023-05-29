@@ -1,4 +1,4 @@
-export * from './config-elements';
+export * from './env-config-elements';
 export * from './delay';
 export * from './display';
 export * from './display-table';
@@ -7,4 +7,6 @@ export * from './get-env-config';
 export * from './list-envs';
 export * from './save-env-config';
 export * from './set-default-env';
+export * from './stack-config-elements';
+export * from './stack-settings-elements';
 export * from './stringify-for-display';

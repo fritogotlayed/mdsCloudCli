@@ -9,6 +9,7 @@ app
   .description('MDS Cloud command line interface')
   .executableDir('commands')
   .command('config', 'Configure your system for various MDS services.')
+  .command('stack', 'Interact with a local cloud-in-a-box stack.')
   .command('env', 'Inspect or adjust mds CLI environments.')
   .command('fs', 'Interacts with the MDS file service')
   .command('id', 'Interacts with the MDS identity service')

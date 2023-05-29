@@ -5,7 +5,7 @@ import { createCommand } from 'commander';
 import { map } from 'lodash';
 import { Options } from '../../types';
 import {
-  CONFIG_ELEMENTS,
+  ENV_CONFIG_ELEMENTS,
   display,
   extendBaseCommand,
   saveEnvConfig,
@@ -18,7 +18,7 @@ cmd
   .argument('<value>', 'The new value of the element')
   .description(
     `Writes a config detail: Valid keys: ${[
-      ...map(CONFIG_ELEMENTS, 'key'),
+      ...map(ENV_CONFIG_ELEMENTS, 'key'),
       'all',
     ].join(', ')}`,
   )
@@ -27,7 +27,7 @@ cmd
 extendBaseCommand(cmd);
 
 cmd.action(async (key: string, value: string, options: Options) => {
-  const configKeys = map(CONFIG_ELEMENTS, 'key');
+  const configKeys = map(ENV_CONFIG_ELEMENTS, 'key');
   if (!configKeys.includes(key)) {
     return Promise.resolve(
       display(

@@ -1,4 +1,4 @@
-export type ConfigElement = {
+export type EnvConfigElement = {
   key: string;
   display: string;
   promptType: string;
@@ -6,7 +6,7 @@ export type ConfigElement = {
   displayOrder: number;
 };
 
-export const CONFIG_ELEMENTS: ConfigElement[] = [
+export const ENV_CONFIG_ELEMENTS: EnvConfigElement[] = [
   {
     key: 'account',
     display: 'Account',

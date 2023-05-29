@@ -5,7 +5,7 @@ import { createCommand } from 'commander';
 import { find, map, sortBy } from 'lodash';
 import { Options } from '../../types';
 import {
-  CONFIG_ELEMENTS,
+  ENV_CONFIG_ELEMENTS,
   display,
   displayTable,
   extendBaseCommand,
@@ -18,7 +18,7 @@ cmd
   .argument('[key]', 'The element to inspect from the environment', 'all')
   .description(
     `Inspects a config detail: Valid keys: ${[
-      ...map(CONFIG_ELEMENTS, 'key'),
+      ...map(ENV_CONFIG_ELEMENTS, 'key'),
       'all',
     ].join(', ')}`,
   )
@@ -27,10 +27,10 @@ cmd
 extendBaseCommand(cmd);
 
 cmd.action(async (key: string, options: Options) => {
-  if (key !== 'all' && !find(CONFIG_ELEMENTS, (e) => e.key === key)) {
+  if (key !== 'all' && !find(ENV_CONFIG_ELEMENTS, (e) => e.key === key)) {
     display(
       `"${key}" key not understood. Expected: ${map(
-        CONFIG_ELEMENTS,
+        ENV_CONFIG_ELEMENTS,
         'key',
       ).join(', ')}`,
     );
@@ -40,7 +40,7 @@ cmd.action(async (key: string, options: Options) => {
   const settings = await getEnvConfig<Record<string, any>>(options.env);
   if (key === 'all') {
     const rows: any[] = [];
-    const configElements = sortBy(CONFIG_ELEMENTS, 'displayOrder');
+    const configElements = sortBy(ENV_CONFIG_ELEMENTS, 'displayOrder');
     configElements.forEach((e) => {
       let value;
       if (e.key === 'password') {

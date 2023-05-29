@@ -7,8 +7,8 @@ import prompts, { PromptObject } from 'prompts';
 import { RegisterUser } from '../lib/register-user';
 import { Options } from '../types';
 import {
-  ConfigElement,
-  CONFIG_ELEMENTS,
+  EnvConfigElement,
+  ENV_CONFIG_ELEMENTS,
   display,
   extendBaseCommand,
   listEnvs,
@@ -25,7 +25,7 @@ cmd
 
 extendBaseCommand(cmd);
 
-function getPrompt(element: ConfigElement) {
+function getPrompt(element: EnvConfigElement) {
   return element.isUrl
     ? `Enter url for the ${element.display}`
     : `Enter your ${element.display}`;
@@ -77,7 +77,7 @@ async function configureIdentity() {
 }
 
 async function getEnvUrls() {
-  const configElements = CONFIG_ELEMENTS.filter(
+  const configElements = ENV_CONFIG_ELEMENTS.filter(
     (e) => e.isUrl && e.key !== 'identityUrl',
   ).sort((a, b) => a.displayOrder - b.displayOrder);
 
