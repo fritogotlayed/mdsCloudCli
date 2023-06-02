@@ -11,6 +11,8 @@ import { StackBuildArgs } from '../../types/stack-build-args';
 import { StackCredentials } from '../../types/stack-credentials';
 import { BaseBuilder } from './builders/base-builder';
 import { IdentityBuilder } from './builders/identity-builder';
+import { NotificationServiceBuilder } from './builders/notification-service-builder';
+import { RedisBuilder } from './builders/redis-builder';
 
 export interface IStackServiceConfigManager {
   onStatusUpdate?: (string) => void;
@@ -238,8 +240,16 @@ export class StackServiceConfigManager implements IStackServiceConfigManager {
     const services: Service[] = [];
     const builders: BaseBuilder[] = [
       new MongoBuilder(baseStackConfigDirectory),
+      new RedisBuilder(),
       new ElkBuilder(baseStackConfigDirectory),
-      new IdentityBuilder(baseStackConfigDirectory),
+      new IdentityBuilder(
+        settings.identityServiceSourceDirectory,
+        baseStackConfigDirectory,
+      ),
+      new NotificationServiceBuilder(
+        settings.notificationServiceSourceDirectory,
+        baseStackConfigDirectory,
+      ),
     ];
 
     builders.forEach((builder) => {
@@ -266,7 +276,7 @@ export class StackServiceConfigManager implements IStackServiceConfigManager {
     });
     const volumes = new Set<string>();
     services.forEach((service) => {
-      service.volumes.forEach((volume) => {
+      (service.volumes || []).forEach((volume) => {
         if (!volume.sourcePath.includes('/')) {
           volumes.add(volume.sourcePath);
         }

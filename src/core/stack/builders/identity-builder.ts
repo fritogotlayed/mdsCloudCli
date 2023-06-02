@@ -21,7 +21,7 @@ export class IdentityBuilder extends BaseBuilder {
     if (args.config.identity === 'local') {
       const imageBuildTask = new ChildProcess({
         command: 'docker build -t local/mds-cloud-identity:latest .',
-        workingDir: args.settings.identityServiceSourceDirectory,
+        workingDir: this.sourceDirectory,
         logFile: join(
           homedir(),
           '.mds',
@@ -31,7 +31,7 @@ export class IdentityBuilder extends BaseBuilder {
         ),
         onStart: () => {
           this.safeOnMilestoneAchieved(
-            `Building container locally at ${args.settings.identityServiceSourceDirectory}`,
+            `Building container locally at ${this.sourceDirectory}`,
           );
         },
       });
@@ -116,11 +116,7 @@ export class IdentityBuilder extends BaseBuilder {
       this.safeOnStatusUpdate('Generating localdev app config');
       const localDevConfTemplate = compile(LocalDevConfTemplate);
       await writeFile(
-        join(
-          args.settings.identityServiceSourceDirectory,
-          'config',
-          'localdev.js',
-        ),
+        join(this.sourceDirectory, 'config', 'localdev.js'),
         localDevConfTemplate({
           db_conn_string: `mongodb://${args.credentials.mongoRootUser}:${args.credentials.mongoRootPass}@localhost:27017/mds-identity`,
           private_key_path: join(
@@ -255,7 +251,7 @@ export class IdentityBuilder extends BaseBuilder {
     return services;
   }
 
-  constructor(baseStackConfigDirectory: string) {
-    super('', baseStackConfigDirectory);
+  constructor(sourceDirectory: string, baseStackConfigDirectory: string) {
+    super(sourceDirectory, baseStackConfigDirectory);
   }
 }
