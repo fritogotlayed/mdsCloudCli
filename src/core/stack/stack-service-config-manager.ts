@@ -14,6 +14,7 @@ import { IdentityBuilder } from './builders/identity-builder';
 import { NotificationServiceBuilder } from './builders/notification-service-builder';
 import { RedisBuilder } from './builders/redis-builder';
 import { QueueServiceBuilder } from './builders/queue-service-builder';
+import { FileServiceBuilder } from './builders/file-service-builder';
 
 export interface IStackServiceConfigManager {
   onStatusUpdate?: (string) => void;
@@ -253,6 +254,10 @@ export class StackServiceConfigManager implements IStackServiceConfigManager {
       ),
       new QueueServiceBuilder(
         settings.queueServiceSourceDirectory,
+        baseStackConfigDirectory,
+      ),
+      new FileServiceBuilder(
+        settings.fileServiceSourceDirectory,
         baseStackConfigDirectory,
       ),
     ];
