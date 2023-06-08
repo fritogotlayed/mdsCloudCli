@@ -103,7 +103,7 @@ export class FileServiceBuilder extends BaseBuilder {
         command: ['./entry-point.sh'],
         volumes: [
           {
-            sourcePath: join(configDir, 'entrypoint.sh'),
+            sourcePath: join(configDir, 'entry-point.sh'),
             containerPath: '/usr/src/app/entry-point.sh',
           },
           {

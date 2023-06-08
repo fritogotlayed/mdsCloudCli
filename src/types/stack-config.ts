@@ -4,5 +4,6 @@ export type StackConfig = {
   queue: string;
   file: string;
   serverlessFunctions: string;
+  dockerMinion: string;
   stateMachine: string;
 };

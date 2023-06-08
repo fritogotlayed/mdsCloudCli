@@ -16,7 +16,7 @@ echo "LOGSTASH_IP: $LOGSTASH_IP"
 
 rm -rf ./.mds-log-pumprc
 echo "{
-  \\"source\\":\\"pino\\",
+  \\"source\\":\\"bunyan\\",
   \\"pump\\":\\"logstashHttp\\",
   \\"mode\\":\\"http\\",
   \\"host\\":\\"$LOGSTASH_IP\\",
@@ -24,5 +24,6 @@ echo "{
   \\"echo\\":true
 }" > ./.mds-log-pumprc
 
-node /usr/src/app/server.js | ./node_modules/.bin/mds-log-pump
+node /usr/src/app/bin/server | ./node_modules/.bin/mds-log-pump
+# node /usr/src/app/server.js | ./node_modules/.bin/mds-log-pump
 `;

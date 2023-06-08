@@ -1,0 +1,14 @@
+export const ProviderConfTemplate = `{
+    "version": "1.0",
+    "runtimeMap": {
+        "node": "mdsCloud",
+        "python": "mdsCloud"
+    },
+    "providers": {
+        "mdsCloud": {
+            "type": "mdsCloud",
+            "baseUrl": "http://mds-sf-dockerMinion:8888"
+        }
+    }
+}
+`;

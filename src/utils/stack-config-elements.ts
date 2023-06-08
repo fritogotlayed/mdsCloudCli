@@ -39,9 +39,15 @@ export const STACK_CONFIG_ELEMENTS: StackConfigElement[] = [
     displayOrder: 5,
   },
   {
+    key: 'dockerMinion',
+    options,
+    displayPrompt: 'docker minion',
+    displayOrder: 6,
+  },
+  {
     key: 'stateMachine',
     options,
     displayPrompt: 'state machine service',
-    displayOrder: 6,
+    displayOrder: 7,
   },
 ];

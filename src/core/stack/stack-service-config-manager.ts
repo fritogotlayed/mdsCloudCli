@@ -15,6 +15,9 @@ import { NotificationServiceBuilder } from './builders/notification-service-buil
 import { RedisBuilder } from './builders/redis-builder';
 import { QueueServiceBuilder } from './builders/queue-service-builder';
 import { FileServiceBuilder } from './builders/file-service-builder';
+import { ServerlessFunctionsServiceBuilder } from './builders/serverless-functions-service-builder';
+import { DockerMinionBuilder } from './builders/docker-minion-builder';
+import { StateMachineServiceBuilder } from './builders/state-machine-service-builder';
 
 export interface IStackServiceConfigManager {
   onStatusUpdate?: (string) => void;
@@ -147,6 +150,12 @@ export class StackServiceConfigManager implements IStackServiceConfigManager {
           addElement('-', `"${key}:${service.ports[key]}"`, 3);
         });
       }
+      if (service.command) {
+        addLine(
+          `command: [${service.command.map((e) => `'${e}'`).join(', ')}]`,
+          2,
+        );
+      }
       if (service.volumes) {
         addLine('volumes:', 2);
         service.volumes.forEach((volumeDatum) => {
@@ -258,6 +267,18 @@ export class StackServiceConfigManager implements IStackServiceConfigManager {
       ),
       new FileServiceBuilder(
         settings.fileServiceSourceDirectory,
+        baseStackConfigDirectory,
+      ),
+      new ServerlessFunctionsServiceBuilder(
+        settings.serverlessFunctionsServiceSourceDirectory,
+        baseStackConfigDirectory,
+      ),
+      new DockerMinionBuilder(
+        settings.dockerMinionServiceSourceDirectory,
+        baseStackConfigDirectory,
+      ),
+      new StateMachineServiceBuilder(
+        settings.stateMachineServiceSourceDirectory,
         baseStackConfigDirectory,
       ),
     ];
