@@ -1,11 +1,19 @@
 import { BaseBuilder } from './base-builder';
 import { StackBuildArgs } from '../../../types/stack-build-args';
+import { chmod, writeFile } from 'fs/promises';
 import { ChildProcess } from '../../../utils/child-process';
 import { join } from 'path';
+import { compile } from 'handlebars';
 import { homedir } from 'os';
 import { Service } from '../../types/docker-compose';
+import { AppConfTemplate } from '../templates/queue-service/app-config';
+import { EntryPointTemplate } from '../templates/queue-service/entry-point';
+import { ServiceRunMode } from '../../../utils';
 
 export class QueueServiceBuilder extends BaseBuilder {
+  #getBaseConfigDirectory(): string {
+    return join(this.baseStackConfigDirectory, 'queueService', 'config');
+  }
   protected getBuilderIdentifier(): string {
     return 'Queue Service';
   }
@@ -37,19 +45,68 @@ export class QueueServiceBuilder extends BaseBuilder {
     }
   }
 
-  protected async writeConfigs(): Promise<void> {
-    // No configs to write for this service
+  protected async writeConfigs(args: StackBuildArgs): Promise<void> {
+    this.safeOnMilestoneAchieved('Writing configs');
+    await this.ensureDirectoryExists(join(this.#getBaseConfigDirectory()));
+
+    this.safeOnStatusUpdate('Generating app config');
+    const appConfTemplate = compile(AppConfTemplate);
+    const isLocalDev = args.config.queue === ServiceRunMode.localDev;
+    const outFile = isLocalDev
+      ? join(this.sourceDirectory, 'config', 'localdev.js')
+      : join(this.#getBaseConfigDirectory(), 'local.js');
+    await writeFile(
+      outFile,
+      appConfTemplate({
+        api_port: isLocalDev ? 8083 : 8888,
+        enable_swagger: isLocalDev,
+        log_level: 'trace',
+        redis_url: isLocalDev ? 'redis://localhost:6379' : 'redis://redis:6379',
+
+        mds_sdk_ns_url: isLocalDev
+          ? 'http://localhost:8082'
+          : 'http://mds-ns:8888',
+        mds_sdk_sf_url: isLocalDev
+          ? 'http://localhost:8085'
+          : 'http://mds-sf:8888',
+        mds_sdk_sm_url: isLocalDev
+          ? 'http://localhost:8086'
+          : 'http://mds-sm:8888',
+        mds_sdk_identity_url: isLocalDev
+          ? 'http://localhost:8079'
+          : 'http://mds-identity-proxy:80',
+        mds_sdk_account: '1',
+        mds_sdk_user: 'admin',
+        mds_sdk_pass: args.settings.defaultAdminPassword,
+
+        orid_provider_key: 'mdsCloud',
+      }),
+    );
+
+    if (!isLocalDev) {
+      this.safeOnStatusUpdate('Generating entrypoint script');
+      const entryPointTemplate = compile(EntryPointTemplate);
+      await writeFile(
+        join(this.#getBaseConfigDirectory(), 'entry-point.sh'),
+        entryPointTemplate({}),
+      );
+
+      await chmod(
+        join(this.#getBaseConfigDirectory(), 'entry-point.sh'),
+        0o774,
+      );
+    }
   }
 
   getDockerComposeServices(args: StackBuildArgs): Service[] {
     const services: Service[] = [];
     const imageLookup = {
       // NOTE: Stable is the default
-      latest: 'mdscloud/mds-queue-service:latest',
-      local: 'local/mds-queue-service:latest',
+      [ServiceRunMode.latest]: 'mdscloud/mds-queue-service:latest',
+      [ServiceRunMode.local]: 'local/mds-queue-service:latest',
     };
 
-    if (args.config.queue === 'localDev') {
+    if (args.config.queue === ServiceRunMode.localDev) {
       // Nothing to do here
     } else {
       services.push({
@@ -61,18 +118,20 @@ export class QueueServiceBuilder extends BaseBuilder {
           '8083': '8888',
         },
         environment: {
-          MDS_LOG_URL: 'http://logstash:6002',
-          MDS_QS_DB_URL: 'redis://redis:6379',
-          ORID_PROVIDER_KEY: 'mdsCloud',
-          MDS_IDENTITY_URL: 'http://mds-identity-proxy:80',
-          MDS_QS_SF_URL: 'http://mds-sf:8888',
-          MDS_QS_SM_URL: 'http://mds-sf:8888',
-          MDS_QS_SYS_USER: 'admin',
-          MDS_QS_SYS_ACCOUNT: '1',
-          MDS_QS_SYS_PASSWORD: args.settings.defaultAdminPassword,
-          MDS_LOG_ALL_REQUESTS: 'false',
+          NODE_ENV: 'production',
           MDS_SDK_VERBOSE: 'true',
         },
+        command: ['./entry-point.sh'],
+        volumes: [
+          {
+            sourcePath: join(this.#getBaseConfigDirectory(), 'local.js'),
+            containerPath: '/usr/src/app/config/local.js',
+          },
+          {
+            sourcePath: join(this.#getBaseConfigDirectory(), 'entry-point.sh'),
+            containerPath: '/usr/src/app/entry-point.sh',
+          },
+        ],
         dependsOn: ['redis', 'logstash', 'mds-identity-proxy'],
         networks: ['app'],
       });

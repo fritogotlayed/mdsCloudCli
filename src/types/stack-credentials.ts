@@ -3,6 +3,10 @@ export type StackCredentials = {
   mongoRootPass: string;
   identity: {
     dbUser: string;
-    dbPassword;
+    dbPassword: string;
+  };
+  kibana: {
+    user: string;
+    password: string;
   };
 };

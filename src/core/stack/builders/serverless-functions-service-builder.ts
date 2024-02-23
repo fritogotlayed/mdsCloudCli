@@ -1,12 +1,15 @@
 import { BaseBuilder } from './base-builder';
 import { join } from 'path';
+import { chmod } from 'fs/promises';
 import { Service } from '../../types/docker-compose';
 import { StackBuildArgs } from '../../../types/stack-build-args';
 import { writeFile } from 'fs/promises';
 import { ChildProcess } from '../../../utils/child-process';
 import { compile } from 'handlebars';
 import { homedir } from 'os';
-import { ProviderConfTemplate } from '../templates/serverless-functions/provider-config';
+import { AppConfTemplate } from '../templates/serverless-functions/app-config';
+import { EntryPointTemplate } from '../templates/serverless-functions/entry-point';
+import { ServiceRunMode } from '../../../utils';
 
 export class ServerlessFunctionsServiceBuilder extends BaseBuilder {
   #getBaseConfigDirectory(): string {
@@ -51,14 +54,73 @@ export class ServerlessFunctionsServiceBuilder extends BaseBuilder {
     this.safeOnMilestoneAchieved('Writing configs');
     await this.ensureDirectoryExists(this.#getBaseConfigDirectory());
 
-    if (args.config.serverlessFunctions === 'localDev') {
-      // TODO: Implement
-    } else {
-      this.safeOnStatusUpdate('Generating provider config');
-      const providerConfTemplate = compile(ProviderConfTemplate);
+    const isLocalDev =
+      args.config.serverlessFunctions === ServiceRunMode.localDev;
+
+    // TODO: Figure out how to inject this entire config into the app config
+    this.safeOnStatusUpdate('Generating provider config');
+    const providerConfig = {
+      version: '1.0',
+      runtimeMap: {
+        node: 'mds',
+        python: 'mds',
+      },
+      providers: {
+        mds: {
+          type: 'mdsCloud',
+          baseUrl: isLocalDev
+            ? 'http://localhost:8888'
+            : 'http://mds-sf-dockerMinion:8888',
+        },
+      },
+    };
+
+    const configPath = isLocalDev
+      ? join(this.sourceDirectory, 'config', 'localdev.js')
+      : join(this.#getBaseConfigDirectory(), 'local.js');
+
+    this.safeOnStatusUpdate(`Generating app config: ${configPath}`);
+    const appConfigTemplate = compile(AppConfTemplate);
+    await writeFile(
+      configPath,
+      appConfigTemplate({
+        api_port: isLocalDev ? 8085 : 8888,
+        enable_swagger: isLocalDev,
+
+        mds_sdk_identity_url: isLocalDev
+          ? 'http://127.0.0.1:8079'
+          : 'http://mds-identity-proxy:80',
+        mds_sdk_account: '1',
+        mds_sdk_user: 'admin',
+        mds_sdk_pass: args.settings.defaultAdminPassword,
+
+        db_conn_string: isLocalDev
+          ? `mongodb://${args.credentials.mongoRootUser}:${args.credentials.mongoRootPass}@localhost:27017`
+          : `mongodb://${args.credentials.mongoRootUser}:${args.credentials.mongoRootPass}@mongo:27017`,
+        db_conn_database: 'mdsCloudServerlessFunctions',
+
+        orid_provider_key: 'mdsCloud',
+        log_level: 'trace',
+
+        // NOTE: attempted {{ and {{{ variants of this, but neither emit in js format. This will likely require
+        // a custom formatter which is out of scope right now.
+        // mds_sf_provider_configuration: JSON.stringify(providerConfig, null, 2),
+        // mds_sf_provider_configuration: providerConfig,
+        mds_sf_docker_minion_url: providerConfig.providers.mds.baseUrl,
+      }),
+    );
+
+    if (args.config.serverlessFunctions !== ServiceRunMode.localDev) {
+      this.safeOnStatusUpdate('Generating entrypoint script');
+      const entryPointTemplate = compile(EntryPointTemplate);
       await writeFile(
-        join(this.#getBaseConfigDirectory(), 'provider-config.json'),
-        providerConfTemplate({}),
+        join(this.#getBaseConfigDirectory(), 'entry-point.sh'),
+        entryPointTemplate({}),
+      );
+
+      await chmod(
+        join(this.#getBaseConfigDirectory(), 'entry-point.sh'),
+        0o774,
       );
     }
   }
@@ -67,11 +129,30 @@ export class ServerlessFunctionsServiceBuilder extends BaseBuilder {
     const services: Service[] = [];
     const imageLookup = {
       // NOTE: Stable is the default
-      latest: 'mdscloud/mds-serverless-functions:latest',
-      local: 'local/mds-serverless-functions:latest',
+      [ServiceRunMode.latest]: 'mdscloud/mds-serverless-functions:latest',
+      [ServiceRunMode.local]: 'local/mds-serverless-functions:latest',
     };
 
-    if (args.config.serverlessFunctions === 'localDev') {
+    const extraHosts = new Set<string>();
+    const dependsOn = new Set<string>([
+      'logstash',
+      'mongo',
+      'mds-identity-proxy',
+    ]);
+
+    if (args.config.queue === ServiceRunMode.localDev) {
+      extraHosts.add('host.docker.internal:host-gateway');
+    } else {
+      dependsOn.add('mds-qs');
+    }
+
+    if (args.config.dockerMinion === ServiceRunMode.localDev) {
+      extraHosts.add('host.docker.internal:host-gateway');
+    } else {
+      dependsOn.add('mds-sf-dockerMinion');
+    }
+
+    if (args.config.serverlessFunctions === ServiceRunMode.localDev) {
       // TODO: Implement
     } else {
       services.push({
@@ -83,39 +164,23 @@ export class ServerlessFunctionsServiceBuilder extends BaseBuilder {
         ports: {
           '8085': '8888',
         },
+        extraHosts: Array.from(extraHosts),
         environment: {
           NODE_ENV: 'production',
-          MDS_FN_MONGO_URL: `mongodb://${args.credentials.mongoRootUser}:${args.credentials.mongoRootPass}@mongo:27017`,
-          MDS_LOG_URL: 'http://logstash:6002',
-          MDS_FN_MONGO_DB_NAME: 'mdsCloudServerlessFunctions',
-          MDS_IDENTITY_URL: 'http://mds-identity-proxy:80',
-          ORID_PROVIDER_KEY: 'mdsCloud',
-          MDS_FN_SYS_USER: 'admin',
-          MDS_FN_SYS_ACCOUNT: '1',
-          MDS_FN_SYS_PASSWORD: args.settings.defaultAdminPassword,
-          MDS_FN_SYS_ALLOW_SELFSIGN_CERT: 'true',
-          MDS_FN_PROVIDER_CONFIG: '/configs/provider-config.json',
-          MDS_SDK_VERBOSE: 'true',
         },
+        command: ['./entry-point.sh'],
         volumes: [
           {
-            sourcePath: join(
-              this.#getBaseConfigDirectory(),
-              'provider-config.json',
-            ),
-            containerPath: '/configs/provider-config.json',
+            sourcePath: join(this.#getBaseConfigDirectory(), 'local.js'),
+            containerPath: '/usr/src/app/config/local.js',
             mode: 'ro',
           },
+          {
+            sourcePath: join(this.#getBaseConfigDirectory(), 'entry-point.sh'),
+            containerPath: '/usr/src/app/entry-point.sh',
+          },
         ],
-        dependsOn: [
-          'logstash',
-          'mongo',
-          'mds-qs',
-          'mds-fs',
-          'mds-ns',
-          'mds-sf-dockerMinion',
-          'mds-identity-proxy',
-        ],
+        dependsOn: Array.from(dependsOn),
         networks: ['app'],
       });
     }

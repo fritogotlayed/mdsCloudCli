@@ -4,6 +4,7 @@ import { ChildProcess } from '../../../utils/child-process';
 import { join } from 'path';
 import { homedir } from 'os';
 import { Service } from '../../types/docker-compose';
+import { ServiceRunMode } from '../../../utils';
 
 export class NotificationServiceBuilder extends BaseBuilder {
   protected getBuilderIdentifier(): string {
@@ -45,11 +46,11 @@ export class NotificationServiceBuilder extends BaseBuilder {
     const services: Service[] = [];
     const imageLookup = {
       // NOTE: Stable is the default
-      latest: 'mdscloud/mds-notification-service:latest',
-      local: 'local/mds-notification-service:latest',
+      [ServiceRunMode.latest]: 'mdscloud/mds-notification-service:latest',
+      [ServiceRunMode.local]: 'local/mds-notification-service:latest',
     };
 
-    if (args.config.notification === 'localDev') {
+    if (args.config.notification === ServiceRunMode.localDev) {
       // Nothing to do here
     } else {
       services.push({

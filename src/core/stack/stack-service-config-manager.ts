@@ -129,7 +129,7 @@ export class StackServiceConfigManager implements IStackServiceConfigManager {
       addElement('init:', service.init, 2);
       addElement('image:', service.image, 2);
       addElement('restart:', service.restart, 2);
-      if (service.extraHosts) {
+      if (service.extraHosts && service.extraHosts.length > 0) {
         addLine('extra_hosts:', 2);
         service.extraHosts.forEach((key) => {
           addElement(`-`, key, 3);
@@ -144,7 +144,7 @@ export class StackServiceConfigManager implements IStackServiceConfigManager {
           addElement(`${key}:`, data, 3);
         });
       }
-      if (service.ports) {
+      if (service.ports && Object.keys(service.ports).length > 0) {
         addLine('ports:', 2);
         Object.keys(service.ports).forEach((key) => {
           addElement('-', `"${key}:${service.ports[key]}"`, 3);
@@ -236,6 +236,10 @@ export class StackServiceConfigManager implements IStackServiceConfigManager {
       identity: {
         dbUser: rootUser,
         dbPassword: rootPass,
+      },
+      kibana: {
+        user: 'elastic',
+        password: 'changeme',
       },
     };
 

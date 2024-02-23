@@ -18,6 +18,7 @@ cmd
     'Rebuilds containers for services in the cloud-in-a-box stack',
   )
   .command('up', 'Starts the cloud-in-a-box services')
-  .command('down', 'Halts the cloud-in-a-box services');
+  .command('down', 'Halts the cloud-in-a-box services')
+  .command('creds', 'Gets the credentials for the cloud-in-a-box services');
 
 cmd.parse(process.argv);

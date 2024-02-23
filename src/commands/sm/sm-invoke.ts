@@ -69,7 +69,8 @@ async function watchOutput(
   display('');
   display('States:', true);
   let running = true;
-  let lastState;
+  let lastState = '';
+  const printedOperations = [];
   do {
     const { status, operations } = await client.getDetailsForExecution(orid);
     const orderedOperations = operations.sort((a, b) => {
@@ -84,12 +85,18 @@ async function watchOutput(
       display(`Output: ${stringifyForDisplay(latestOperation.output)}`);
     } else {
       const newState = latestOperation.stateKey;
-      if (lastState !== newState) {
-        lastState = newState;
-        display('');
-        display(`${newState}.`, true);
-      } else {
-        display('.', true);
+      for (const operation of orderedOperations) {
+        if (!printedOperations.includes(operation.id)) {
+          printedOperations.push(operation.id);
+          display('');
+          display(`${operation.stateKey}.`, true);
+        } else {
+          if (lastState !== newState) {
+            lastState = newState;
+          } else if (operation.stateKey === lastState) {
+            display('.', true);
+          }
+        }
       }
       await delay(interval * 1000);
     }

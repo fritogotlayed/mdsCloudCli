@@ -8,8 +8,12 @@ import { compile } from 'handlebars';
 import { AppConfTemplate } from '../templates/file-service/app-config';
 import { EntryPointTemplate } from '../templates/file-service/entry-point';
 import { homedir } from 'os';
+import { ServiceRunMode } from '../../../utils';
 
 export class FileServiceBuilder extends BaseBuilder {
+  #getBaseConfigDirectory(): string {
+    return join(this.baseStackConfigDirectory, 'fileService', 'config');
+  }
   protected getBuilderIdentifier(): string {
     return 'File Service';
   }
@@ -46,31 +50,38 @@ export class FileServiceBuilder extends BaseBuilder {
     await this.ensureDirectoryExists(
       join(this.baseStackConfigDirectory, 'fileService', 'config'),
     );
+    const isLocalDev = args.config.file === ServiceRunMode.localDev;
 
-    if (args.config.file === 'localDev') {
-      // TODO: Implement
-    } else {
-      this.safeOnStatusUpdate('Generating override app config');
-      const appConfTemplate = compile(AppConfTemplate);
-      await writeFile(
-        join(
-          this.baseStackConfigDirectory,
-          'fileService',
-          'config',
-          'local.js',
-        ),
-        appConfTemplate({}),
-      );
+    this.safeOnStatusUpdate('Generating override app config');
+    const appConfTemplate = compile(AppConfTemplate);
+    await writeFile(
+      isLocalDev
+        ? join(this.sourceDirectory, 'config', 'localdev.js')
+        : join(this.#getBaseConfigDirectory(), 'local.js'),
+      appConfTemplate({
+        mds_sdk_identity_url: isLocalDev
+          ? 'http://127.0.0.1:8079'
+          : 'http://mds-identity-proxy:80',
+        mds_sdk_account: '1',
+        mds_sdk_user: 'admin',
+        mds_sdk_pass: args.settings.defaultAdminPassword,
 
+        orid_provider_key: 'mdsCloud',
+
+        log_level: 'trace',
+      }),
+    );
+
+    if (!isLocalDev) {
       this.safeOnStatusUpdate('Generating entrypoint script');
       const entryPointTemplate = compile(EntryPointTemplate);
       await writeFile(
-        join(this.baseStackConfigDirectory, 'fileService', 'entry-point.sh'),
+        join(this.#getBaseConfigDirectory(), 'entry-point.sh'),
         entryPointTemplate({}),
       );
 
       await chmod(
-        join(this.baseStackConfigDirectory, 'fileService', 'entry-point.sh'),
+        join(this.#getBaseConfigDirectory(), 'entry-point.sh'),
         0o774,
       );
     }
@@ -81,11 +92,11 @@ export class FileServiceBuilder extends BaseBuilder {
     const services: Service[] = [];
     const imageLookup = {
       // NOTE: Stable is the default
-      latest: 'mdscloud/mds-file-service:latest',
-      local: 'local/mds-file-service:latest',
+      [ServiceRunMode.latest]: 'mdscloud/mds-file-service:latest',
+      [ServiceRunMode.local]: 'local/mds-file-service:latest',
     };
 
-    if (args.config.file === 'localDev') {
+    if (args.config.file === ServiceRunMode.localDev) {
       // TODO: Implement
     } else {
       services.push({
@@ -103,11 +114,11 @@ export class FileServiceBuilder extends BaseBuilder {
         command: ['./entry-point.sh'],
         volumes: [
           {
-            sourcePath: join(configDir, 'entry-point.sh'),
+            sourcePath: join(this.#getBaseConfigDirectory(), 'entry-point.sh'),
             containerPath: '/usr/src/app/entry-point.sh',
           },
           {
-            sourcePath: join(configDir, 'config', 'local.js'),
+            sourcePath: join(this.#getBaseConfigDirectory(), 'local.js'),
             containerPath: '/usr/src/app/config/local.js',
             mode: 'ro',
           },

@@ -5,7 +5,19 @@ export type StackConfigElement = {
   displayOrder: number;
 };
 
-const options = ['stable', 'latest', 'local', 'localDev'];
+export enum ServiceRunMode {
+  stable = 'stable',
+  latest = 'latest',
+  local = 'local',
+  localDev = 'localDev',
+}
+
+const options = [
+  ServiceRunMode.stable,
+  ServiceRunMode.latest,
+  ServiceRunMode.local,
+  ServiceRunMode.localDev,
+];
 
 export const STACK_CONFIG_ELEMENTS: StackConfigElement[] = [
   {

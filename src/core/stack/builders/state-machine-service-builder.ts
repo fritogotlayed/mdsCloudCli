@@ -2,11 +2,9 @@ import { BaseBuilder } from './base-builder';
 import { join } from 'path';
 import { Service } from '../../types/docker-compose';
 import { StackBuildArgs } from '../../../types/stack-build-args';
-import { writeFile } from 'fs/promises';
 import { ChildProcess } from '../../../utils/child-process';
-import { compile } from 'handlebars';
 import { homedir } from 'os';
-import { ProviderConfTemplate } from '../templates/serverless-functions/provider-config';
+import { ServiceRunMode } from '../../../utils';
 
 export class StateMachineServiceBuilder extends BaseBuilder {
   #getBaseConfigDirectory(): string {
@@ -51,14 +49,30 @@ export class StateMachineServiceBuilder extends BaseBuilder {
     const services: Service[] = [];
     const imageLookup = {
       // NOTE: Stable is the default
-      latest: 'mdscloud/mds-state-machine:latest',
-      local: 'local/mds-state-machine:latest',
+      [ServiceRunMode.latest]: 'mdscloud/mds-state-machine:latest',
+      [ServiceRunMode.local]: 'local/mds-state-machine:latest',
     };
 
-    if (args.config.stateMachine === 'localDev') {
+    const extraHosts = new Set<string>();
+    const dependsOn = new Set<string>(['mongo', 'mds-identity-proxy']);
+
+    if (args.config.queue === ServiceRunMode.localDev) {
+      extraHosts.add('host.docker.internal:host-gateway');
+    } else {
+      dependsOn.add('mds-qs');
+    }
+
+    if (args.config.serverlessFunctions === ServiceRunMode.localDev) {
+      extraHosts.add('host.docker.internal:host-gateway');
+    } else {
+      dependsOn.add('mds-sf');
+    }
+
+    if (args.config.stateMachine === ServiceRunMode.localDev) {
       // TODO: Implement
     } else {
-      services.push({
+      // API Service
+      const apiService: Service = {
         key: 'mds-sm',
         image:
           imageLookup[args.config.stateMachine] ??
@@ -68,23 +82,36 @@ export class StateMachineServiceBuilder extends BaseBuilder {
           '8086': '8888',
         },
         command: ['server'],
+        extraHosts: Array.from(extraHosts),
         environment: {
           NODE_ENV: 'production',
-          FORCE_INTERNAL_WORKER: 'true',
-          MDS_SM_DB_URL: `mongodb://${args.credentials.mongoRootUser}:${args.credentials.mongoRootPass}@mongo:27017`,
+          // MDS_SM_DB_URL: `mongodb://${args.credentials.mongoRootUser}:${args.credentials.mongoRootPass}@mongo:27017`,
+          FN_SM_DB_URL: `mongodb://${args.credentials.mongoRootUser}:${args.credentials.mongoRootPass}@mongo:27017`,
           ORID_PROVIDER_KEY: 'mdsCloud',
           PENDING_QUEUE_NAME: 'orid:1:mdsCloud:::1:qs:mds-sm-pendingQueue',
           IN_FLIGHT_QUEUE_NAME: 'orid:1:mdsCloud:::1:qs:mds-sm-inFlightQueue',
           MDS_IDENTITY_URL: 'http://mds-identity-proxy:80',
           MDS_SM_QS_URL: 'http://mds-qs:8888',
-          MDS_SM_SF_URL: 'http://mds-sf:8888',
-          MDS_FN_SYS_USER: 'admin',
-          MDS_FN_SYS_ACCOUNT: '1',
-          MDS_FN_SYS_PASSWORD: args.settings.defaultAdminPassword,
+          MDS_SM_SF_URL:
+            args.config.serverlessFunctions === ServiceRunMode.localDev
+              ? 'http://host.docker.internal:8085'
+              : 'http://mds-sf:8888',
+          MDS_SM_SYS_USER: 'admin',
+          MDS_SM_SYS_ACCOUNT: '1',
+          MDS_SM_SYS_PASSWORD: args.settings.defaultAdminPassword,
           MDS_SDK_VERBOSE: 'true',
         },
-        dependsOn: ['mongo', 'mds-qs', 'mds-identity-proxy'],
+        dependsOn: Array.from(dependsOn),
         networks: ['app'],
+      };
+      services.push(apiService);
+
+      // Worker Service
+      services.push({
+        ...apiService,
+        key: 'mds-sm-worker',
+        ports: undefined,
+        command: ['worker'],
       });
     }
 

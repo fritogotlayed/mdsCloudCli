@@ -16,7 +16,7 @@ To set up the CLI for local development:
 * `npm link` -- sets up your terminal environment to be able to run `mds`
 
 To remove the locally linked CLI:
-* `npm unlink mds-cloud-cli` -- removes the link from your system
+* `npm unlink -g mds-cloud-cli` -- removes the link from your system
 
 ## Usage
 

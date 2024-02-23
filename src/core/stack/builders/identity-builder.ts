@@ -11,6 +11,7 @@ import { AppConfTemplate } from '../templates/identity/app-config';
 import { EntryPointTemplate } from '../templates/identity/entry-point';
 import { homedir } from 'os';
 import { LocalDevConfTemplate } from '../templates/identity/localdev-config';
+import { ServiceRunMode } from '../../../utils';
 
 export class IdentityBuilder extends BaseBuilder {
   protected getBuilderIdentifier(): string {
@@ -106,13 +107,13 @@ export class IdentityBuilder extends BaseBuilder {
       nginxConfTemplate({
         // TODO: Handle multiple servers
         servers:
-          args.config.identity === 'localDev'
+          args.config.identity === ServiceRunMode.localDev
             ? '        server host.docker.internal:8888;'
             : '        server mds-identity-1:8888;',
       }),
     );
 
-    if (args.config.identity === 'localDev') {
+    if (args.config.identity === ServiceRunMode.localDev) {
       this.safeOnStatusUpdate('Generating localdev app config');
       const localDevConfTemplate = compile(LocalDevConfTemplate);
       await writeFile(
@@ -166,8 +167,8 @@ export class IdentityBuilder extends BaseBuilder {
     const services: Service[] = [];
     const imageLookup = {
       // NOTE: Stable is the default
-      latest: 'mdscloud/mds-cloud-identity:latest',
-      local: 'local/mds-cloud-identity:latest',
+      [ServiceRunMode.latest]: 'mdscloud/mds-cloud-identity:latest',
+      [ServiceRunMode.local]: 'local/mds-cloud-identity:latest',
     };
 
     const proxyService: Service = {
@@ -203,7 +204,7 @@ export class IdentityBuilder extends BaseBuilder {
     };
 
     services.push(proxyService);
-    if (args.config.identity === 'localDev') {
+    if (args.config.identity === ServiceRunMode.localDev) {
       // Loop back to the host machine for testing :-)
       proxyService.extraHosts = ['host.docker.internal:host-gateway'];
     } else {
