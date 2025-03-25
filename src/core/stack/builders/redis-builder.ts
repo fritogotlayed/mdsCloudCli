@@ -1,6 +1,5 @@
 import { BaseBuilder } from './base-builder';
 import { Service } from '../../types/docker-compose';
-import { StackBuildArgs } from '../../../types/stack-build-args';
 
 export class RedisBuilder extends BaseBuilder {
   protected getBuilderIdentifier(): string {
@@ -15,7 +14,7 @@ export class RedisBuilder extends BaseBuilder {
     // Redis configuration requires no config files
   }
 
-  getDockerComposeServices(args: StackBuildArgs): Service[] {
+  getDockerComposeServices(): Service[] {
     return [
       {
         key: 'redis',

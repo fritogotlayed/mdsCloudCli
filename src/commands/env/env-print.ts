@@ -3,7 +3,7 @@
 
 import { createCommand } from 'commander';
 import { display } from '../../utils';
-import { getDefaultEnv } from '../../utils/get-default-env';
+import { getDefaultEnvSync } from '../../utils/get-default-env';
 
 const cmd = createCommand();
 cmd
@@ -14,7 +14,7 @@ cmd
   .showHelpAfterError(true);
 
 cmd.action(async () => {
-  display(`Current environment: ${getDefaultEnv()}`);
+  display(`Current environment: ${getDefaultEnvSync()}`);
 });
 
 cmd.parseAsync(process.argv);

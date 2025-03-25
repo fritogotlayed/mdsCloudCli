@@ -4,10 +4,19 @@
 import { createCommand } from 'commander';
 import { join } from 'path';
 import { homedir } from 'os';
-import { display, displayTable } from '../../utils';
+import { display, displayTable, delay } from '../../utils';
 import { readFile } from 'fs/promises';
 import { StackCredentials } from '../../types/stack-credentials';
 import { ChildProcess } from '../../utils/child-process';
+
+async function checkContainerStatus(name: string): Promise<string> {
+  const childProcess = new ChildProcess({
+    command: `docker container inspect -f '{{.State.Status}}' ${name}`,
+    workingDir: join(homedir(), '.mds', 'stack'),
+  });
+  const result = await childProcess.execute();
+  return result.trim();
+}
 
 const cmd = createCommand();
 cmd
@@ -20,6 +29,9 @@ cmd.action(async () => {
   display(
     'NOTE: This may take some time if your system does not existing docker images.',
   );
+  display(
+    'Prompt will regain focus after the stack is up and the ELK setup is complete.',
+  );
   const stackCredsFilePath = join(homedir(), '.mds', 'stack', 'stack-creds.js');
   const loadCredsTask = readFile(stackCredsFilePath);
   const composeUpProcess = new ChildProcess({
@@ -30,6 +42,26 @@ cmd.action(async () => {
 
   const credsData = await loadCredsTask;
   await composeUpProcess.execute();
+
+  let checkAgain = true;
+  do {
+    const containerStatus = await checkContainerStatus('mds-stack-elk-setup-1');
+    if (containerStatus === 'exited') {
+      checkAgain = false;
+    } else if (containerStatus.startsWith('Error response from daemon')) {
+      checkAgain = false;
+    } else {
+      await delay(500);
+    }
+  } while (checkAgain);
+
+  // Remove confusion by anyone using docker desktop that may see the stopped ELK setup container
+  // and wonder if setup failed
+  const composeCleanupProcess = new ChildProcess({
+    command: 'docker rm mds-stack-elk-setup-1',
+    workingDir: join(homedir(), '.mds', 'stack'),
+  });
+  await composeCleanupProcess.execute();
 
   const creds = JSON.parse(credsData.toString()) as StackCredentials;
 

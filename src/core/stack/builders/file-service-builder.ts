@@ -88,7 +88,6 @@ export class FileServiceBuilder extends BaseBuilder {
   }
 
   getDockerComposeServices(args: StackBuildArgs): Service[] {
-    const configDir = join(this.baseStackConfigDirectory, 'fileService');
     const services: Service[] = [];
     const imageLookup = {
       // NOTE: Stable is the default

@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { getDefaultEnv } from '../get-default-env';
+import { getDefaultEnvSync } from '../get-default-env';
 import * as IN_PROC_CACHE from '../in-proc-cache';
 
 jest.mock('fs', () => ({
@@ -19,7 +19,7 @@ describe('getDefaultEnv', () => {
     const getSpy = jest.spyOn(IN_PROC_CACHE, 'get');
 
     // Act
-    const result = getDefaultEnv();
+    const result = getDefaultEnvSync();
 
     // Assert
     expect(result).toBe('test-env');
@@ -32,7 +32,7 @@ describe('getDefaultEnv', () => {
     jest.spyOn(fs, 'existsSync').mockImplementation(() => false);
 
     // Act
-    const result = getDefaultEnv();
+    const result = getDefaultEnvSync();
 
     // Assert
     expect(result).toBe('default');
@@ -47,7 +47,7 @@ describe('getDefaultEnv', () => {
     jest.spyOn(fs, 'readFileSync').mockImplementation(() => 'test-value');
 
     // Act
-    const result = getDefaultEnv();
+    const result = getDefaultEnvSync();
 
     // Assert
     expect(result).toBe('test-value');

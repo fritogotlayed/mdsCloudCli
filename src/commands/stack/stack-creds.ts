@@ -4,10 +4,9 @@
 import { createCommand } from 'commander';
 import { join } from 'path';
 import { homedir } from 'os';
-import { display, displayTable } from '../../utils';
+import { displayTable } from '../../utils';
 import { readFile } from 'fs/promises';
 import { StackCredentials } from '../../types/stack-credentials';
-import { ChildProcess } from '../../utils/child-process';
 
 const cmd = createCommand();
 cmd

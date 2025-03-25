@@ -6,7 +6,7 @@ LOGSTASH_IP=$(arp | grep logstash | sed -n 's/^.* (\\(.*\\)) .*$/\\1/p')
 while [ "$LOGSTASH_IP" = "" ]
 do
     sleep 1
-    ping -c 1
+    ping -c 1 logstash
     echo $(arp)
     LOGSTASH_IP=$(arp | grep logstash | sed -n 's/^.* (\\(.*\\)) .*$/\\1/p')
 done

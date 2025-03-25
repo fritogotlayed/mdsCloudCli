@@ -125,7 +125,7 @@ cmd.action(async (orid: string, options: Options<Params>) => {
       display(`Execution Started: ${result.orid}`);
       watchOutput(client, result.orid, options.watchInterval);
     } else {
-      display('Function invoked successfully');
+      display(`Function invoked successfully: ${result.orid}`);
     }
   } catch (err) {
     display('An error occurred while invoking the serverless function');

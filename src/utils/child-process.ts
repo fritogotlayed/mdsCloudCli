@@ -7,6 +7,14 @@ export class ChildProcess {
   readonly #logFile?: string;
   readonly #onStart: () => void;
 
+  /**
+   * Creates a new child process.
+   * @param args The arguments object.
+   * @param args.command The command to execute.
+   * @param args.workingDir The working directory.
+   * @param args.logFile The file to log the output to. If not provided, the output will be returned fom the execute method.
+   * @param args.onStart A callback to call when the process starts.
+   */
   constructor({
     command,
     workingDir,
@@ -24,8 +32,12 @@ export class ChildProcess {
     this.#onStart = onStart;
   }
 
-  execute(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
+  /**
+   * Implementation of the execute method.
+   * @returns A promise that resolves to the output of the command.
+   */
+  execute() {
+    return new Promise<string>((resolve, reject) => {
       this.#onStart && this.#onStart();
       exec(
         this.#command,
@@ -38,11 +50,15 @@ export class ChildProcess {
             reject(error);
           } else {
             if (this.#logFile) {
-              writeFile(this.#logFile, stdout || stderr, () => {
-                resolve();
+              writeFile(this.#logFile, stdout || stderr, (err) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve(stdout || stderr);
+                }
               });
             } else {
-              resolve();
+              resolve(stdout || stderr);
             }
           }
         },

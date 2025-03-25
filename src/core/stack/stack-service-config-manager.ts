@@ -19,6 +19,18 @@ import { ServerlessFunctionsServiceBuilder } from './builders/serverless-functio
 import { DockerMinionBuilder } from './builders/docker-minion-builder';
 import { StateMachineServiceBuilder } from './builders/state-machine-service-builder';
 
+/**
+ * Executes an array of promises in order.
+ * #param promises - An array of promises to execute in order.
+ */
+function promiseWaterfall<T>(promises: Promise<T>[]): Promise<T[]> {
+  return promises.reduce(async (accumulator, currentPromise) => {
+    const results = await accumulator;
+    const result = await currentPromise;
+    return [...results, result];
+  }, Promise.resolve([] as T[]));
+}
+
 export interface IStackServiceConfigManager {
   onStatusUpdate?: (string) => void;
   onMilestoneAchieved?: (string) => void;
@@ -298,7 +310,8 @@ export class StackServiceConfigManager implements IStackServiceConfigManager {
 
     // TODO: Promise waterfall here?
     try {
-      await Promise.all(tasks);
+      // await Promise.all(tasks);
+      await promiseWaterfall(tasks);
     } catch (err) {
       console.dir(err);
     }

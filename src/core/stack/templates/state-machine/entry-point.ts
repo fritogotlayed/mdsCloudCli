@@ -24,5 +24,9 @@ echo "{
   \\"echo\\":true
 }" > ./.mds-log-pumprc
 
-node /usr/src/app/presentation/server.js | ./node_modules/.bin/mds-log-pump
+if [ "$1" = "worker" ]; then
+    node /usr/src/app/worker/entry-point.js | ./node_modules/.bin/mds-log-pump
+else
+    node /usr/src/app/presentation/server.js | ./node_modules/.bin/mds-log-pump
+fi;
 `;
